@@ -9,7 +9,8 @@ def main():
 
     # Filter data for 'DEPT OF ED PEDAGOGICAL' agency and 'TEACHER' title
     df = data[(data['Agency Name'] == 'DEPT OF ED PEDAGOGICAL')&
-                (data['Title Description'] == 'TEACHER')]
+              (data['Title Description'] == 'TEACHER')&
+              (data['Fiscal Year']>=2020)]
 
     # Drop unused columns
     df = df.drop(columns=['Payroll Number', 'Agency Name',
@@ -39,6 +40,8 @@ def main():
     df['Last Name'] = df['Last Name'].str.strip().str.title()
     df['First Name'] = df['First Name'].str.strip().str.title()
     df['Leave Status'] = df['Leave Status'].str.strip().str.title()
+    # Fill in Missing Middle Initial
+    df['Mid Init'] = df['Mid Init'].fillna('None')
 
     # Concatenated Key
     df['FirstMidLastStart'] = df['First Name'] + df['Mid Init'] + df['Last Name'] + df['Hire Date'].astype(str)
