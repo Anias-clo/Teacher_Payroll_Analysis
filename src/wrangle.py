@@ -15,7 +15,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         conditions = (
             (data['Agency Name'] == 'DEPT OF ED PEDAGOGICAL') &
             (data['Title Description'] == 'TEACHER') &
-            (data['Leave Status as of June 30'] == 'ACTIVE') &
+            # (data['Leave Status as of June 30'] == 'ACTIVE') &
             (data['Regular Gross Paid'] > 0)
         )
 
@@ -31,7 +31,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Hire Date'] = pd.to_datetime(df['Hire Date'], errors='coerce')
         df = df.dropna(subset=['Hire Date'])
         df['Hire Year'] = df['Hire Date'].dt.year
-        # df['Hire Year'] = df['Hire Year'].astype('Int16')
+        df['Hire Year'] = df['Hire Year'].astype('Int16')
 
         # Calculate the number of years employed as a NYC teacher
         df['Years of Employment'] = df['Fiscal Year'] - df['Hire Year']
