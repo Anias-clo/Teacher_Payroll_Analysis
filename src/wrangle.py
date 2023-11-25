@@ -15,14 +15,14 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         conditions = (
             (data['Agency Name'] == 'DEPT OF ED PEDAGOGICAL') &
             (data['Title Description'] == 'TEACHER') &
-            # (data['Leave Status as of June 30'] == 'ACTIVE') &
+            (data['Leave Status as of June 30'] == 'ACTIVE') &
             (data['Regular Gross Paid'] > 0)
         )
 
         # Drop unused columns
         df = data[conditions].drop(columns=['Payroll Number', 'Agency Name', 'Work Location Borough',
                                         'Title Description', 'Pay Basis', 'Regular Hours', 'OT Hours',
-                                        'Total OT Paid', 'Leave Status as of June 30']).drop_duplicates()
+                                        'Total OT Paid', ]).drop_duplicates()
 
         df.rename(columns={'Agency Start Date': 'Hire Date',
                            'Base Salary': 'Salary'}, inplace=True)
@@ -37,10 +37,6 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Years of Employment'] = df['Fiscal Year'] - df['Hire Year']
         df['Years of Employment'] = df['Years of Employment'].astype('Int16')
         df['Years of Employment'] = pd.to_numeric(df['Years of Employment'], errors='coerce')
-
-        # Calculate teachers total gross pay
-        df['Total Paid'] = df['Regular Gross Paid'] + df['Total Other Pay']
-
         df = df.dropna(subset=['Years of Employment'])
 
         # Employee Key
@@ -49,25 +45,16 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         )
         df['FirstMidLastStart'] = df['First Name'] + df['Mid Init'] + df['Last Name'] + df['Hire Date'].astype(str)
 
-        df = df.sort_values(by='Fiscal Year').reset_index(drop=True)
+        df = df.sort_values(by=['Fiscal Year', 'FirstMidLastStart']).reset_index(drop=True)
 
         # Salary changes YoY
         df['Salary Delta'] = df.groupby(['FirstMidLastStart'])['Salary'].pct_change() * 100
         df['Salary Monetary Diff'] = df.groupby(['FirstMidLastStart'])['Salary'].diff()
-
-        df['Total Paid Delta'] = df.groupby(['FirstMidLastStart'])['Total Paid'].pct_change() * 100
-        df['Total Paid Monetary Diff'] = df.groupby(['FirstMidLastStart'])['Total Paid'].diff()
         
-        df[['Salary Delta',
-            'Salary Monetary Diff',
-            'Total Paid Delta',
-            'Total Paid Monetary Diff']] = (df[['Salary Delta',
-                                                'Salary Monetary Diff',
-                                                'Total Paid Delta',
-                                                'Total Paid Monetary Diff']]
-                                            .fillna(0)
-                                            .round(2)
-                                            )
+        df[['Salary Delta','Salary Monetary Diff']] = (df[['Salary Delta','Salary Monetary Diff']]
+                                                       .fillna(0)
+                                                       .round(2)
+                                                       )
 
         ## Categorical Features
         employment_bins = [-1, 5, 10, 15, 20, 25, 30, 35, 40, 50]
@@ -82,49 +69,49 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         delta_labels = ['<-5%', '0-5%', '5-10%', '10-15%', '15-20%', '20-30%', '30-40%', '40-50%', '50-100%', '100%+']
 
         # Define bin edges for 'Salary Monetary Diff'
-        monetary_diff_bins = [-60000, -5000, 5000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 70000]
-        monetary_diff_labels = ['<-5k', '-5k-5k', '5k-10k', '10k-15k', '15k-20k', '20k-30k', '30k-40k', '40k-50k', '50k-60k', '60k+']
+        monetary_diff_bins = [-60000, 0, 5000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 70000]
+        monetary_diff_labels = ['<-5k', '0-5k', '5k-10k', '10k-15k', '15k-20k', '20k-30k', '30k-40k', '40k-50k', '50k-60k', '60k+']
 
         # Apply binning to create categorical features
         df['Employment Category'] = pd.cut(df['Years of Employment'], bins=employment_bins, labels=employment_labels)
         df['Salary Category'] = pd.cut(df['Salary'], bins=salary_bins, labels=salary_labels)
         df['Salary Delta Category'] = pd.cut(df['Salary Delta'], bins=delta_bins, labels=delta_labels)
         df['Salary Monetary Diff Category'] = pd.cut(df['Salary Monetary Diff'], bins=monetary_diff_bins, labels=monetary_diff_labels)
-        df['Total Paid Category'] = pd.cut(df['Total Paid'], bins=salary_bins, labels=salary_labels)
-        df['Total Paid Delta Category'] = pd.cut(df['Total Paid Delta'], bins=delta_bins, labels=delta_labels)
-        df['Total Paid Monetary Diff Category'] = pd.cut(df['Total Paid Monetary Diff'], bins=monetary_diff_bins, labels=monetary_diff_labels)
 
         # Transform bins into categorical features
         df['Employment Category'] = pd.Categorical(df['Employment Category'],categories=employment_labels,ordered=True)
         df['Salary Category'] = pd.Categorical(df['Salary Category'],categories=salary_labels,ordered=True)
         df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'],categories=delta_labels,ordered=True)
         df['Salary Monetary Diff Category'] =  pd.Categorical(df['Salary Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
-        df['Total Paid Category'] = pd.Categorical(df['Total Paid Category'],categories=salary_labels,ordered=True)
-        df['Total Paid Delta Category'] = pd.Categorical(df['Total Paid Delta Category'],categories=delta_labels,ordered=True)
-        df['Total Paid Monetary Diff Category'] = pd.Categorical(df['Total Paid Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
-
-
+        
         # Drop unused columns and reorder columns
         df = df.drop(columns=['Last Name', 'First Name', 'Mid Init'])
 
         # Remove outliers
         df = df[(df['Hire Year']>=1980)&
                 (df['Years of Employment']<=50)&
-                (df['Fiscal Year']>2014)]
+                (df['Fiscal Year']>2018)].reset_index(drop=True)
+        
+        df = df.sort_values(by=['FirstMidLastStart', 'Fiscal Year'])
+        df['Salary Decrease Flag'] = (df['Salary Monetary Diff'] < 0).astype(int)
+        df['Salary Decrease Flag'].iloc[df.groupby('FirstMidLastStart').head(1).index]=0
 
-        df = df[['Fiscal Year', 'Hire Date', 'Hire Year', 'Years of Employment',
-                 'FirstMidLastStart', 'Salary', 'Total Other Pay', 'Total Paid',
+        df = df[(df['Salary Decrease Flag']==0)&(df['Salary Delta']>=0)]
+        df = df.sort_values(by=['FirstMidLastStart', 'Fiscal Year']).reset_index(drop=True)
+
+        df = df[['Fiscal Year',
+                 'FirstMidLastStart',
+                 'Hire Date',
+                 'Hire Year',
+                 'Years of Employment',
                  'Employment Category',
-                 'Salary Category',
-                 'Total Paid Category',
-                 'Salary Delta Category',
-                 'Total Paid Delta Category',
-                 'Salary Monetary Diff Category',
-                 'Total Paid Monetary Diff Category',
-                 'Salary Delta',
-                 'Total Paid Delta',
+                 'Salary',
                  'Salary Monetary Diff',
-                 'Total Paid Monetary Diff']]
+                 'Salary Delta',
+                 'Salary Category',
+                 'Salary Delta Category',
+                 'Salary Monetary Diff Category'
+                 ]]
         
         # Save teachers payroll dataset
         df.to_csv('./data/teachers_payroll.csv', index=False)
