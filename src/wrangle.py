@@ -1,16 +1,39 @@
 import os
 import pandas as pd
 
+
+def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
+    '''
+    
+    '''
+    df = pd.read_csv(cached_file,engine='pyarrow')
+    employment_labels = ['0-5', '6-10', '11-15', '16-20', '21-25', '26-30', '31-35', '36-40', '41+']
+    salary_labels = ['40k-60k', '60k-80k', '80k-100k', '100k-120k', '120k-140k', '140k-160k+']
+    delta_labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-30%', '30-40%', '40-50%', '50-100%', '100%+']
+    monetary_diff_labels = ['0-5k', '5k-10k', '10k-15k', '15k-20k', '20k-30k', '30k-40k', '40k-50k', '50k-60k', '60k+']
+
+    # Transform bins into categorical features
+    df['Employment Category'] = pd.Categorical(df['Employment Category'],categories=employment_labels,ordered=True)
+    df['Salary Category'] = pd.Categorical(df['Salary Category'],categories=salary_labels,ordered=True)
+    df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'],categories=delta_labels,ordered=True)
+    df['Salary Monetary Diff Category'] =  pd.Categorical(df['Salary Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
+    df['FirstMidLastStart'] = pd.Categorical(df['FirstMidLastStart'])
+
+    df['Hire Date'] = pd.to_datetime(df['Hire Date'])
+
+    return df
+
+
 def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/teachers_payroll.csv'):
     '''
     
     '''
     # Check for teachers payroll data
     if os.path.exists(cached_file):
-        return pd.read_csv(cached_file)
+        return read_teacher_data(cached_file)
     # Load the city payroll
     else:
-        data = pd.read_csv(file_path)
+        data = pd.read_csv(file_path,engine='pyarrow')
 
         conditions = (
             (data['Agency Name'] == 'DEPT OF ED PEDAGOGICAL') &
