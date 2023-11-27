@@ -1,5 +1,17 @@
 import os
 import pandas as pd
+from datetime import datetime, timedelta
+
+
+def calculate_fiscal_year(hire_date):
+    fiscal_year_start = hire_date.year if hire_date.month >= 7 else hire_date.year - 1
+    return fiscal_year_start
+
+def label_hire_dates(hire_date):
+    if 7 <= hire_date.month <= 12:
+        return 'A'
+    else:
+        return 'B'
 
 
 def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
@@ -55,6 +67,12 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df = df.dropna(subset=['Hire Date'])
         df['Hire Year'] = df['Hire Date'].dt.year
         df['Hire Year'] = df['Hire Year'].astype('Int16')
+
+        df['Fiscal Year of Hire'] = df['Hire Date'].apply(calculate_fiscal_year)
+        df['Paystep Letter'] = df['Hire Date'].apply(label_hire_dates)
+
+        df['Days Since Hire'] = (datetime.now() - df['Hire Date']).dt.days
+        df['Paystep'] = (df['Days Since Hire'] / 365).apply(lambda x: int(x) + 1)
 
         # Calculate the number of years employed as a NYC teacher
         df['Years of Employment'] = df['Fiscal Year'] - df['Hire Year']
@@ -126,12 +144,15 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                  'FirstMidLastStart',
                  'Hire Date',
                  'Hire Year',
+                 'Fiscal Year of Hire',
                  'Years of Employment',
                  'Employment Category',
+                 'Paystep',
+                 'Paystep Letter',
                  'Salary',
-                 'Salary Monetary Diff',
-                 'Salary Delta',
                  'Salary Category',
+                 'Salary Delta',
+                 'Salary Monetary Diff',
                  'Salary Delta Category',
                  'Salary Monetary Diff Category'
                  ]]
@@ -140,6 +161,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df.to_csv('./data/teachers_payroll.csv', index=False)
 
         return df
+
 
 
 ############# Future Analysis ####################
