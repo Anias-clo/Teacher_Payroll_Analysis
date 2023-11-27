@@ -86,11 +86,11 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         )
         df['FirstMidLastStart'] = df['First Name'] + df['Mid Init'] + df['Last Name'] + df['Hire Date'].astype(str)
 
-        df = df.sort_values(by=['Fiscal Year', 'FirstMidLastStart']).reset_index(drop=True)
+        df = df.sort_values(by=['FirstMidLastStart', 'Fiscal Year']).reset_index(drop=True)
 
         # Salary changes YoY
-        df['Salary Delta'] = df.groupby(['FirstMidLastStart'])['Salary'].pct_change() * 100
-        df['Salary Monetary Diff'] = df.groupby(['FirstMidLastStart'])['Salary'].diff()
+        df['Salary Delta'] = df.groupby(by=['FirstMidLastStart'])['Salary'].pct_change() * 100
+        df['Salary Monetary Diff'] = df.groupby(by=['FirstMidLastStart'])['Salary'].diff()
         
         df[['Salary Delta','Salary Monetary Diff']] = (df[['Salary Delta','Salary Monetary Diff']]
                                                        .fillna(0)
@@ -137,7 +137,6 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Salary Decrease Flag'] = (df['Salary Monetary Diff'] < 0).astype(int)
         df['Salary Decrease Flag'].iloc[df.groupby('FirstMidLastStart').head(1).index]=0
 
-        df = df[(df['Salary Decrease Flag']==0)&(df['Salary Delta']>=0)]
         df = df.sort_values(by=['FirstMidLastStart', 'Fiscal Year']).reset_index(drop=True)
 
         df = df[['Fiscal Year',
