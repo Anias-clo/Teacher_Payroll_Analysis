@@ -26,13 +26,12 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Project files
 city_payroll_data.csv
-data/salary_schedule_2018.csv
-data/salary_schedule_2019.csv
-data/salary_schedule_2020.csv
-data/salary_schedule_2021.csv
-data/salary_schedule_2022.csv
-data/salary_schedule_2024.csv
+data/salary_schedule_20*.csv
+data/teachers_payroll_*.csv
+data/*.ipynb
+data/*.ipynb_checkpoints
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
