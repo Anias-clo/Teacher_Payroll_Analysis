@@ -27,6 +27,12 @@ share/python-wheels/
 MANIFEST
 
 city_payroll_data.csv
+data/salary_schedule_2018.csv
+data/salary_schedule_2019.csv
+data/salary_schedule_2020.csv
+data/salary_schedule_2021.csv
+data/salary_schedule_2022.csv
+data/salary_schedule_2024.csv
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

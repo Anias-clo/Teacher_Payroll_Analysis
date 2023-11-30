@@ -1,35 +1,73 @@
 import os
+import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
 
 
 def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
     '''
+    Reads and returns the NYC teachers payroll data from a CSV file.
     
+    Parameters:
+    - cached_file (str): Path to the cached CSV file containing teachers payroll data.
+    
+    Returns:
+    - pd.DataFrame: DataFrame containing NYC teachers payroll data.
     '''
-    df = pd.read_csv(cached_file,engine='pyarrow')
+    df = pd.read_csv(cached_file, engine='pyarrow')
     employment_labels = ['0-5', '6-10', '11-15', '16-20', '21-25', '26+']
     salary_labels = ['40k-60k', '60k-80k', '80k-100k', '100k-120k', '120k-140k', '140k-160k+']
-    delta_labels = ['<0%', '0%','1-5%', '5-10%', '10-15%', '15-20%', '20%+']
+    delta_labels = ['<0%', '0%', '1-5%', '5-10%', '10-15%', '15+%']
     simplified_delta_labels = ['Salary Decreased', 'No Change', 'Salary Increased']
-    monetary_diff_labels = ['<-0k', '0K','1-5k', '5k-10k', '10k-15k', '15k-20k', '20k+']
+    monetary_diff_labels = ['<-0k', '0K', '1-5k', '5k-10k', '10k-15k', '15k-20k', '20k+']
+
+    # New categories
+    paystep_labels = ['Other','1A', '2A', '3A', '4A', '5A', '6A', '6A+L5', '6B', '6B+L5', '7A',
+       '7A+L5', '7B', '7B+L5', '8A', '8A+L5', '8B', '8B+L5', '8B+L10', '8B+L13',
+       '8B+L15', '8B+L18', '8B+L20', '8B+L22']
+    differential_labels = ['Other','BA','Pre1970','BA+30','BA+60','BA+66','BA+96','MA','MA+']
+    differential_category_labels = ['Other', 'Bachelor Degree', 'Pre1970 Teacher',
+                                    'Bachelor Degree + 30 Credit Hours',
+                                    'Bachelor Degree + 60 Credit Hours',
+                                    'Bachelor Degree + 66 Credit Hours',
+                                    'Bachelor Degree + 96 Credit Hours',
+                                    'Masters Degree', 'Masters Plus']
+    salary_schedule_labels = ['Other', '2018', '2019', '2020', '2021', '2022', '2024']
+    degree_labels = ['Other', 'Bachelors', 'Masters']
 
     # Transform bins into categorical features
-    df['Employment Category'] = pd.Categorical(df['Employment Category'],categories=employment_labels,ordered=True)
-    df['Salary Category'] = pd.Categorical(df['Salary Category'],categories=salary_labels,ordered=True)
-    df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'],categories=delta_labels,ordered=True)
-    df['Salary Simplified Delta Category'] = pd.Categorical(df['Salary Simplified Delta Category'],categories=simplified_delta_labels,ordered=True)
-    df['Salary Monetary Diff Category'] =  pd.Categorical(df['Salary Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
+    df['Employment Category'] = pd.Categorical(df['Employment Category'], categories=employment_labels, ordered=True)
+    df['Salary Category'] = pd.Categorical(df['Salary Category'], categories=salary_labels, ordered=True)
+    df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'], categories=delta_labels, ordered=True)
+    df['Salary Simplified Delta Category'] = pd.Categorical(df['Salary Simplified Delta Category'],
+                                                            categories=simplified_delta_labels, ordered=True)
+    df['Salary Monetary Diff Category'] = pd.Categorical(df['Salary Monetary Diff Category'],
+                                                         categories=monetary_diff_labels, ordered=True)
+    
+    df['Paystep'] = pd.Categorical(df['Paystep'], categories=paystep_labels , ordered=True)
+    df['Differential'] = pd.Categorical(df['Differential'], categories=differential_labels , ordered=True)
+    df['Differential Category'] = pd.Categorical(df['Differential Category'], categories= differential_category_labels, ordered=True)
+    df['Salary Schedule'] = pd.Categorical(df['Salary Schedule'], categories=salary_schedule_labels , ordered=True)
+    df['Degree'] = pd.Categorical(df['Degree'], categories=degree_labels, ordered=True)
+
     df['Employee ID'] = df['Employee ID'].astype('O')
 
     df['Hire Date'] = pd.to_datetime(df['Hire Date'])
+    df['Salary'] = df['Salary'].astype('int')
 
     return df
 
 
 def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/teachers_payroll.csv'):
     '''
+    Reads, filters, and returns NYC teachers payroll data from a CSV file.
+    If a cached file is available, it is used; otherwise, the data is loaded and processed.
     
+    Parameters:
+    - file_path (str): Path to the city payroll data CSV file.
+    - cached_file (str): Path to the cached CSV file for teachers payroll data.
+    
+    Returns:
+    - pd.DataFrame: DataFrame containing filtered and processed NYC teachers payroll data.
     '''
     # Check for teachers payroll data
     if os.path.exists(cached_file):
@@ -39,16 +77,16 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         data = pd.read_csv(file_path,engine='pyarrow')
 
         conditions = (
-            (data['Agency Name'] == 'DEPT OF ED PEDAGOGICAL') &
-            (data['Title Description'] == 'TEACHER') &
-            (data['Leave Status as of June 30'] == 'ACTIVE') &
-            (data['Regular Gross Paid'] > 0)
+            (data['Agency Name']=='DEPT OF ED PEDAGOGICAL') &
+            (data['Title Description']=='TEACHER') &
+            (data['Leave Status as of June 30']!='CEASED') &
+            (data['Regular Gross Paid']>0)
         )
 
         # Drop unused columns
         df = data[conditions].drop(columns=['Payroll Number', 'Agency Name', 'Work Location Borough',
                                         'Title Description', 'Pay Basis', 'Regular Hours', 'OT Hours',
-                                        'Total OT Paid', ]).drop_duplicates()
+                                        'Total OT Paid', 'Leave Status as of June 30']).drop_duplicates()
 
         df.rename(columns={'Agency Start Date': 'Hire Date',
                            'Base Salary': 'Salary'}, inplace=True)
@@ -75,6 +113,9 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
 
         df = df.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
 
+        # Cast Salary to an Integer
+        df['Salary'] = df['Salary'].astype('int')
+
         # Salary changes YoY
         df['Salary Delta'] = df.groupby(by=['Employee ID'])['Salary'].pct_change() * 100
         df['Salary Monetary Diff'] = df.groupby(by=['Employee ID'])['Salary'].diff()
@@ -93,8 +134,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         salary_labels = ['40k-60k', '60k-80k', '80k-100k', '100k-120k', '120k+']
 
         # Define bin edges for 'Salary Delta'
-        delta_bins = [-50, -0.0001, 0.0001, 5, 10, 15, 20, 200]
-        delta_labels = ['<0%', '0%','1-5%', '5-10%', '10-15%', '15-20%', '20%+']
+        delta_bins = [-100, -0.0001, 0.0001, 5, 10, 15, 200]
+        delta_labels = ['<0%', '0%','1-5%', '5-10%', '10-15%', '15+%']
 
         # Define bin edges for 'Simplified Salary Delta'
         simplified_delta_bins = [-50,-0.0001, 0.0001, 200]
@@ -121,7 +162,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         # Remove outliers
         df = df[(df['Hire Year']>=1980)&
                 (df['Years of Employment']<=50)&
-                (df['Fiscal Year']>2014)
+                (df['Fiscal Year']>=2017)
                 ].reset_index(drop=True)
         
         df = df.sort_values(by=['Employee ID', 'Fiscal Year'])
@@ -129,28 +170,89 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Salary Decrease Flag'].iloc[df.groupby('Employee ID').head(1).index]=0
 
         df = df.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
-
-        df = df[['Fiscal Year',
-                 'Employee ID',
-                 'Hire Date',
-                 'Hire Year',
-                 'Years of Employment',
-                 'Employment Category',
-                 'Salary',
-                 'Salary Category',
-                 'Salary Decrease Flag',
-                 'Salary Delta',
-                 'Salary Monetary Diff',
-                 'Salary Simplified Delta Category',
-                 'Salary Delta Category',
-                 'Salary Monetary Diff Category'
-                 ]]
         
+        # Add pay schedule features
+        df_schedule = pd.read_csv('./data/salary_schedule_2018_to_2024.csv', engine='pyarrow')
+        df_schedule_long = df_schedule.melt(id_vars=['Paystep'], var_name='Differential', value_name='Salary')
+        merged_df = pd.merge(df, df_schedule_long, how='left', left_on='Salary', right_on='Salary')
+
+        def get_paystep(row):
+            paysteps = merged_df.loc[merged_df['Salary'] == row['Salary'], 'Paystep'].tolist()
+            return paysteps[0] if paysteps else 'Other'
+        
+        def get_differential(row):
+            differentials = merged_df.loc[merged_df['Salary'] == row['Salary'], 'Differential'].tolist()
+            return differentials[0] if differentials else 'Other'
+        
+        df['Paystep'] = df.apply(get_paystep, axis=1)
+        df['Differential'] = df.apply(get_differential, axis=1)
+
+        differential_mapping = {'BA':'Bachelor Degree',
+                                'Pre1970':'Pre1970 Teacher',
+                                'BA+30':'Bachelor Degree + 30 Credit Hours',
+                                'BA+60':'Bachelor Degree + 60 Credit Hours',
+                                'BA+66':'Bachelor Degree + 66 Credit Hours',
+                                'BA+96':'Bachelor Degree + 96 Credit Hours',
+                                'MA':'Masters Degree',
+                                'MA+':'Masters Plus'}
+        df['Differential Category'] = df['Differential'].map(differential_mapping)
+        df[['Paystep','Salary Schedule']] = df['Paystep'].str.split(':', expand=True)
+
+        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = (df[['Paystep', 'Differential',
+                                                                                   'Differential Category', 'Salary Schedule']]
+                                                                                   .fillna('Other')
+                                                                                   )
+        
+        df['Degree'] = np.where(df['Differential Category'].str.contains('Masters'), 'Masters', df['Differential Category'])
+        df['Degree'] = np.where(df['Degree'].str.contains('Bachelor'), 'Bachelors', df['Degree'])
+        df['Degree'] = np.where(df['Degree'].str.contains('Pre1970'), 'Other', df['Degree'])
+
+        # New categories
+        paystep_labels = ['Other','1A', '2A', '3A', '4A', '5A', '6A', '6A+L5', '6B', '6B+L5', '7A',
+                          '7A+L5', '7B', '7B+L5', '8A', '8A+L5', '8B', '8B+L5', '8B+L10', '8B+L13',
+                          '8B+L15', '8B+L18', '8B+L20', '8B+L22']
+        differential_labels = ['Other','BA','Pre1970','BA+30','BA+60','BA+66','BA+96','MA','MA+']
+        differential_category_labels = ['Other', 'Bachelor Degree', 'Pre1970 Teacher',
+                                        'Bachelor Degree + 30 Credit Hours',
+                                        'Bachelor Degree + 60 Credit Hours',
+                                        'Bachelor Degree + 66 Credit Hours',
+                                        'Bachelor Degree + 96 Credit Hours',
+                                        'Masters Degree', 'Masters Plus']
+        salary_schedule_labels = ['Other', '2018', '2019', '2020', '2021', '2022', '2024']
+        degree_labels = ['Other', 'Bachelors', 'Masters']
+
+        df['Paystep'] = pd.Categorical(df['Paystep'], categories=paystep_labels , ordered=True)
+        df['Differential'] = pd.Categorical(df['Differential'], categories=differential_labels , ordered=True)
+        df['Differential Category'] = pd.Categorical(df['Differential Category'], categories= differential_category_labels, ordered=True)
+        df['Salary Schedule'] = pd.Categorical(df['Salary Schedule'], categories=salary_schedule_labels , ordered=True)
+        df['Degree'] = pd.Categorical(df['Degree'], categories=degree_labels, ordered=True)
+
+        # Reorder columns
+        df = df[['Fiscal Year',
+            'Employee ID',
+            'Hire Date',
+            'Hire Year',
+            'Years of Employment',
+            'Employment Category',
+            'Salary',
+            'Degree',
+            'Paystep',
+            'Differential',
+            'Differential Category',
+            'Salary Schedule',
+            'Salary Category',
+            'Salary Decrease Flag',
+            'Salary Delta',
+            'Salary Monetary Diff',
+            'Salary Simplified Delta Category',
+            'Salary Delta Category',
+            'Salary Monetary Diff Category'
+            ]]
+
         # Save teachers payroll dataset
         df.to_csv('./data/teachers_payroll.csv', index=False)
 
         return df
-
 
 
 ############# Future Analysis ####################
