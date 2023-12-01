@@ -2,7 +2,7 @@
 
 ## Project Description:
 
-This project explores the payroll structure for New York City teachers, focusing on starting pay, annual increases, and tenure. The analysis aims to provide valuable insights for teachers, policymakers, and researchers interested in the NYC education system.
+This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of UFT salary contracts from 2014 to 2023. The analysis will consider variables such as union dues and inflation to assess the overall financial implications for teachers. By offering insights into the relationship between salary contracts, individual compensation, and economic factors, the objective is to empower teachers to make informed decisions about their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
 
 ## Executive Summary:
 
