@@ -15,8 +15,9 @@ def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
     '''
     df = pd.read_csv(cached_file, engine='pyarrow')
 
+    df['Fiscal Year'] = df['Fiscal Year'].astype('Int16')
     df['Hire Date'] = pd.to_datetime(df['Hire Date'])
-    df['Salary'] = df['Salary'].astype('int')
+    df['Salary'] = df['Salary'].astype('Int32')
     df['Hire Year'] = df['Hire Year'].astype('Int16')
     df['Hire Month'] = df['Hire Month'].astype('Int16')
     df['Years of Employment'] = df['Years of Employment'].astype('Int16')
@@ -243,14 +244,19 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         
         df['Differential Category'] = df['Differential'].map(differential_mapping)
 
-        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].ffill()
-        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].bfill()
-        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].fillna('Other')
-        
+        df[['Paystep', 'Differential', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Salary Schedule']].fillna('Other')
+    
+        df = df.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
+
+        df['Differential Category Temp'] = df.groupby(by=['Employee ID'])['Differential Category'].bfill()
+        df['Differential Category Temp'] = df.groupby(by=['Employee ID'])['Differential Category Temp'].ffill()
+
         # Add teacher's degree
-        df['Degree'] = np.where(df['Differential Category'].str.contains('Master'), 'Master\'s', df['Differential Category'])
+        df['Degree'] = np.where(df['Differential Category Temp'].str.contains('Master'), 'Master\'s', df['Differential Category'])
         df['Degree'] = np.where(df['Degree'].str.contains('Bachelor'), 'Bachelor\'s', df['Degree'])
         df['Degree'] = np.where(df['Degree'].str.contains('Pre1970'), 'Other', df['Degree'])
+
+        df['Differential Category'] = df['Differential Category'].fillna('Other')
 
         # Pay schedule categories
         paystep_labels = ['Other','1A', '2A', '3A', '4A', '5A', '6A', '6A+L5', '6B', '6B+L5', '7A',
@@ -313,9 +319,32 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
             'Salary Delta Category',
             'Salary Monetary Diff Category'
             ]]
+        
+        df_salary_summary = df[['Fiscal Year',
+                                'Employee ID',
+                                'Hire Date',
+                                'Years of Employment',
+                                'Salary',
+                                'Additional Pay',
+                                'Degree',
+                                'Paystep',
+                                'Salary Schedule Year',
+                                'Fiscal Year Rate',
+                                'Salary Schedule Rate',
+                                'UFT Dues']]
+        
+        g = df_salary_summary.groupby('Employee ID')
+        df_summary = pd.concat([g.head(1), g.tail(1)]).drop_duplicates()\
+                                                    .sort_values('Employee ID')\
+                                                    .reset_index(drop=True)
+        df_summary = df_summary.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
+
+        df_salary_summary.to_csv('./data/teacher_salary_summary.csv', index=False)
+        df_summary.to_csv('./data/teacher_lifetime_summary.csv', index=False)
 
         # Save teachers payroll dataset
         df.to_csv('./data/teachers_payroll.csv', index=False)
+
 
         return df
 
