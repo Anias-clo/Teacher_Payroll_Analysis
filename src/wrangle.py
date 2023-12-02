@@ -20,9 +20,12 @@ def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
     df['Hire Year'] = df['Hire Year'].astype('Int16')
     df['Hire Month'] = df['Hire Month'].astype('Int16')
     df['Years of Employment'] = df['Years of Employment'].astype('Int16')
+    df['Salary Schedule Year'] = df['Salary Schedule Year'].astype('Int16')
     df['Employee ID'] = df['Employee ID'].astype('O')
 
+    decade_labels = ["1960's", "1970's", "1980's", "1990's", "2000's", "2010's", "2020's"]
     employment_labels = ['0-5', '6-10', '11-15', '16-20', '21-25', '26+']
+    contract_labels = ["2009-2018", "2019-2021", "2022-2027"]
     salary_labels = ['40k-60k', '60k-80k', '80k-100k', '100k-120k', '120k-140k', '140k-160k+']
     additional_pay_labels = ['<$0', '$0', '0-$500', '$500-$1K', '$1k-$3K', '$3K-$10K', '$10K+']
     delta_labels = ['<=0%', '0.01-5%', '5-10%', '10-15%', '15+%']
@@ -46,7 +49,9 @@ def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
     degree_labels = ['Other', 'Bachelor\'s', 'Master\'s']
 
     # Transform bins into categorical features
+    df['Hire Decade'] = pd.Categorical(df['Hire Decade'],categories=decade_labels,ordered=True) 
     df['Employment Category'] = pd.Categorical(df['Employment Category'], categories=employment_labels, ordered=True)
+    df['Contract Period'] = pd.Categorical(df['Contract Period'],categories=contract_labels,ordered=True)
     df['Salary Category'] = pd.Categorical(df['Salary Category'], categories=salary_labels, ordered=True)
     df['Additional Pay Category'] = pd.Categorical(df['Additional Pay Category'],categories=additional_pay_labels,ordered=True)  
     df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'], categories=delta_labels, ordered=True)
@@ -130,9 +135,10 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         # Cast Salary to an Integer and calculate annual union dues
         union_dues_before_2023 = 63.81*24
         union_dues_2023 = 65.60*24
-        df['Salary'] = df['Salary'].astype('int')
         df['UFT Dues'] = np.where(df['Fiscal Year']<=2022,union_dues_before_2023,union_dues_2023)
 
+        # Calculate the annual salary change YoY as % and $
+        df['Salary'] = df['Salary'].astype('int')
         # Salary changes YoY
         df['Salary Delta'] = df.groupby(by=['Employee ID'])['Salary'].pct_change() * 100
         df['Salary Monetary Diff'] = df.groupby(by=['Employee ID'])['Salary'].diff()
@@ -142,9 +148,17 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                                                        .round(2)
                                                        )
 
-        ## Categorical Features
+        # Define bin edges for 'Salary Delta'
+        decade_bins = [1960, 1969, 1979, 1989, 1999, 2009, 2019, 2029]
+        decade_labels = ["1960's", "1970's", "1980's", "1990's", "2000's", "2010's", "2020's"]
+
+        # Define employment bins
         employment_bins = [-1, 5, 10, 15, 20, 25, 60]
         employment_labels = ['0-5', '6-10', '11-15', '16-20', '21-25', '26+']
+
+        # Define UFT contract bins
+        contract_bins = [2009,2018,2021,2027]
+        contract_labels = ["2009-2018", "2019-2021", "2022-2027"]
 
         # Define bin edges for 'Salary'
         salary_bins = [40000, 60000, 80000, 100000, 120000, 160000]
@@ -167,7 +181,9 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         monetary_diff_labels = ['<=0k','1-5k', '5k-10k', '10k-15k', '15k-20k', '20k+']
 
         # Apply binning to create categorical features
+        df['Hire Decade'] = pd.cut(df['Hire Year'], bins=decade_bins, labels=decade_labels)
         df['Employment Category'] = pd.cut(df['Years of Employment'], bins=employment_bins, labels=employment_labels)
+        df['Contract Period'] = pd.cut(df['Fiscal Year'], bins=contract_bins, labels=contract_labels)
         df['Salary Category'] = pd.cut(df['Salary'], bins=salary_bins, labels=salary_labels)
         df['Additional Pay Category'] = pd.cut(df['Additional Pay'],bins=additional_pay_bins, labels=additional_pay_labels)
         df['Salary Delta Category'] = pd.cut(df['Salary Delta'], bins=delta_bins, labels=delta_labels)
@@ -175,7 +191,9 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Salary Monetary Diff Category'] = pd.cut(df['Salary Monetary Diff'], bins=monetary_diff_bins, labels=monetary_diff_labels)
 
         # Transform bins into categorical features
+        df['Hire Decade'] = pd.Categorical(df['Hire Decade'],categories=decade_labels,ordered=True)
         df['Employment Category'] = pd.Categorical(df['Employment Category'],categories=employment_labels,ordered=True)
+        df['Contract Period'] = pd.Categorical(df['Contract Period'],categories=contract_labels,ordered=True)
         df['Salary Category'] = pd.Categorical(df['Salary Category'],categories=salary_labels,ordered=True)
         df['Additional Pay Category'] = pd.Categorical(df['Additional Pay Category'],categories=additional_pay_labels,ordered=True)
         df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'],categories=delta_labels,ordered=True)
@@ -183,8 +201,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Salary Monetary Diff Category'] =  pd.Categorical(df['Salary Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
 
         # Remove outliers
-        df = df[(df['Hire Year']>=1980)&
-                (df['Years of Employment']<=60)]\
+        df = df[(df['Hire Year']>=1960)&
+                (df['Years of Employment']<=65)]\
                 .sort_values(by=['Employee ID', 'Fiscal Year'])\
                 .reset_index(drop=True)
         
@@ -210,6 +228,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Paystep'] = df.apply(get_paystep, axis=1)
         df['Differential'] = df.apply(get_differential, axis=1)
         df['Salary Schedule'] = df.apply(get_salary_schedule, axis=1)
+        df['Salary Schedule Year'] = df['Salary Schedule'].str.extract(r'([0-9]{4})').astype('Int16')
+        df['Salary Schedule Year'] = df['Salary Schedule Year'].fillna(-1)
 
         # Add differential requirements and replace missing values
         differential_mapping = {'BA':'Bachelor\'s Degree',
@@ -223,6 +243,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         
         df['Differential Category'] = df['Differential'].map(differential_mapping)
 
+        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].ffill()
+        df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].bfill()
         df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']] = df[['Paystep', 'Differential', 'Differential Category', 'Salary Schedule']].fillna('Other')
         
         # Add teacher's degree
@@ -246,11 +268,21 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                                   '2020', '2021', '2022', '2024']
         degree_labels = ['Other', 'Bachelor\'s', 'Master\'s']
 
+        # Map the salary schedule rate increases
+        salary_schedule_rates = [0, 1, 0, 1, 3, 3.5, 4.5, 2, 3, 2, 2.5, 3, 3, 0, 3]
+        fiscal_years = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+        fiscal_year_rates =[1,3,3.5,4.5,5,2,2.5,3,3,0]
+        fiscal_rates_mapping = dict(zip(fiscal_years, fiscal_year_rates))
+        salary_schedule_rates_mapping = dict(zip(salary_schedule_labels, salary_schedule_rates))
+
         df['Paystep'] = pd.Categorical(df['Paystep'], categories=paystep_labels , ordered=True)
         df['Differential'] = pd.Categorical(df['Differential'], categories=differential_labels , ordered=True)
         df['Differential Category'] = pd.Categorical(df['Differential Category'], categories= differential_category_labels, ordered=True)
         df['Salary Schedule'] = pd.Categorical(df['Salary Schedule'], categories=salary_schedule_labels , ordered=True)
         df['Degree'] = pd.Categorical(df['Degree'], categories=degree_labels, ordered=True)
+
+        df['Fiscal Year Rate'] = df['Fiscal Year'].map(fiscal_rates_mapping)
+        df['Salary Schedule Rate'] = df['Salary Schedule'].map(salary_schedule_rates_mapping)
 
         # Reorder columns
         df = df[['Fiscal Year',
@@ -258,6 +290,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
             'Hire Date',
             'Hire Month',
             'Hire Year',
+            'Hire Decade',
             'Years of Employment',
             'Employment Category',
             'Salary',
@@ -267,6 +300,10 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
             'Differential',
             'Differential Category',
             'Salary Schedule',
+            'Salary Schedule Year',
+            'Fiscal Year Rate',
+            'Salary Schedule Rate',
+            'Contract Period',
             'UFT Dues',
             'Salary Category',
             'Additional Pay Category',
@@ -285,13 +322,28 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
 
 ############# Future Analysis ####################
 # All education related agencies
-education_agencies = [
-'DEPT OF ED PER DIEM TEACHERS',
-'DEPT OF ED PER SESSION TEACHER',
-'DEPARTMENT OF EDUCATION ADMIN',
-'DEPT OF ED HRLY SUPPORT STAFF',
-'DEPT OF ED PARA PROFESSIONALS',
-'DEPT OF ED PEDAGOGICAL',
-'TEACHERS RETIREMENT SYSTEM',
-'NYC EMPLOYEES RETIREMENT SYS'
-]
+# education_agencies = [
+# 'DEPT OF ED PER DIEM TEACHERS',
+# 'DEPT OF ED PER SESSION TEACHER',
+# 'DEPARTMENT OF EDUCATION ADMIN',
+# 'DEPT OF ED HRLY SUPPORT STAFF',
+# 'DEPT OF ED PARA PROFESSIONALS',
+# 'DEPT OF ED PEDAGOGICAL',
+# 'TEACHERS RETIREMENT SYSTEM',
+# 'NYC EMPLOYEES RETIREMENT SYS'
+# ]
+
+# df['Fiscal Year Adjusted'] = np.where(df['Fiscal Year'] > 2021,
+#                                       df['Fiscal Year'] - (df['Fiscal Year'] - 2021),
+#                                       df['Fiscal Year'])
+
+# Add pay schedule features
+# df_schedule = pd.read_csv('salary_schedules.csv', engine='pyarrow')
+# df_schedule_long = df_schedule.melt(id_vars=['Paystep', 'Salary Schedule'],
+#                                     var_name='Differential',
+#                                     value_name='Salary')
+
+# df_new = pd.merge(df, df_schedule_long,
+#                   how='left',
+#                   left_on=['Salary','Fiscal Year Adjusted'],
+#                   right_on=['Salary','Salary Schedule Year'])
