@@ -42,7 +42,7 @@ def read_teacher_data(cached_file='./data/teachers_payroll.csv'):
                                     'Bachelor\'s Degree + 30 Credit Hours',
                                     'Bachelor\'s Degree + 60 Credit Hours',
                                     'Bachelor\'s Degree + 66 Credit Hours',
-                                    'Bachelor\'s Degree + 96 Credit Hours',
+                                    'Master\'s Degree or Equivalent',
                                     'Master\'s Degree', 'Master\'s Degree Plus']
     salary_schedule_labels = ['Other','2013', '2014 May', '2014 Sept', '2015',
                                 '2016', '2017', '2018 May', '2018 June', '2019',
@@ -106,6 +106,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         # Rename columns
         df.rename(columns={'Agency Start Date': 'Hire Date',
                            'Base Salary': 'Salary',
+                           'Regular Gross Paid': 'Gross Pay',
                            'Total Other Pay': 'Additional Pay'}, inplace=True)
 
         # Cast Hire Date to datetime, add Hire Year, Hire Month
@@ -134,12 +135,16 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df = df.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
 
         # Cast Salary to an Integer and calculate annual union dues
-        union_dues_before_2023 = 63.81*24
-        union_dues_2023 = 65.60*24
-        df['UFT Dues'] = np.where(df['Fiscal Year']<=2022,union_dues_before_2023,union_dues_2023)
+        years = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+        dues = [51.87, 53.95, 56.10, 57.19, 58.31, 59.64, 61, 62.39, 63.81, 65.50]
+        union_dues = [due*24 for due in dues]
+        union_dues_mapping = dict(zip(years, union_dues))
+        df['UFT Dues'] = df['Fiscal Year'].map(union_dues_mapping)
 
         # Calculate the annual salary change YoY as % and $
         df['Salary'] = df['Salary'].astype('int')
+        df['Total Pay'] = df['Gross Pay'] + df['Additional Pay']
+
         # Salary changes YoY
         df['Salary Delta'] = df.groupby(by=['Employee ID'])['Salary'].pct_change() * 100
         df['Salary Monetary Diff'] = df.groupby(by=['Employee ID'])['Salary'].diff()
@@ -238,7 +243,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                                 'BA+30':'Bachelor\'s Degree + 30 Credit Hours',
                                 'BA+60':'Bachelor\'s Degree + 60 Credit Hours',
                                 'BA+66':'Bachelor\'s Degree + 66 Credit Hours',
-                                'BA+96':'Bachelor\'s Degree + 96 Credit Hours',
+                                'BA+96':'Master\'s Degree or Equivalent',
                                 'MA':'Master\'s Degree',
                                 'MA+':'Master\'s Degree Plus'}
         
@@ -267,7 +272,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                                         'Bachelor\'s Degree + 30 Credit Hours',
                                         'Bachelor\'s Degree + 60 Credit Hours',
                                         'Bachelor\'s Degree + 66 Credit Hours',
-                                        'Bachelor\'s Degree + 96 Credit Hours',
+                                        'Master\'s Degree or Equivalent',
                                         'Master\'s Degree', 'Master\'s Degree Plus']
         salary_schedule_labels = ['Other','2013', '2014 May', '2014 Sept', '2015',
                                   '2016', '2017', '2018 May', '2018 June', '2019',
@@ -276,9 +281,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
 
         # Map the salary schedule rate increases
         salary_schedule_rates = [0, 1, 0, 1, 3, 3.5, 4.5, 2, 3, 2, 2.5, 3, 3, 0, 3]
-        fiscal_years = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
         fiscal_year_rates =[1,3,3.5,4.5,5,2,2.5,3,3,0]
-        fiscal_rates_mapping = dict(zip(fiscal_years, fiscal_year_rates))
+        fiscal_rates_mapping = dict(zip(years, fiscal_year_rates))
         salary_schedule_rates_mapping = dict(zip(salary_schedule_labels, salary_schedule_rates))
 
         df['Paystep'] = pd.Categorical(df['Paystep'], categories=paystep_labels , ordered=True)
@@ -300,7 +304,9 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
             'Years of Employment',
             'Employment Category',
             'Salary',
+            'Gross Pay',
             'Additional Pay',
+            'Total Pay',
             'Degree',
             'Paystep',
             'Differential',
@@ -325,22 +331,17 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
                                 'Hire Date',
                                 'Years of Employment',
                                 'Salary',
+                                'Grosss Pay',
                                 'Additional Pay',
-                                'Degree',
-                                'Paystep',
+                                'Total Pay',
                                 'Salary Schedule Year',
                                 'Fiscal Year Rate',
                                 'Salary Schedule Rate',
                                 'UFT Dues']]
         
         g = df_salary_summary.groupby('Employee ID')
-        df_summary = pd.concat([g.head(1), g.tail(1)]).drop_duplicates()\
-                                                    .sort_values('Employee ID')\
-                                                    .reset_index(drop=True)
-        df_summary = df_summary.sort_values(by=['Employee ID', 'Fiscal Year']).reset_index(drop=True)
 
         df_salary_summary.to_csv('./data/teacher_salary_summary.csv', index=False)
-        df_summary.to_csv('./data/teacher_lifetime_summary.csv', index=False)
 
         # Save teachers payroll dataset
         df.to_csv('./data/teachers_payroll.csv', index=False)
