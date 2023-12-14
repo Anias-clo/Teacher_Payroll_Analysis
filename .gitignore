@@ -28,8 +28,8 @@ MANIFEST
 
 # Project files
 city_payroll_data.csv
-data/salary_schedule_20*.csv
-data/teachers_payroll_*.csv
+data/*.csv
+data/*old.parquet
 data/*.ipynb
 data/*.ipynb_checkpoints
 
