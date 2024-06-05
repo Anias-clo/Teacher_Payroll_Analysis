@@ -2,7 +2,7 @@
 
 ## Project Description:
 
-This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of UFT salary contracts from 2014 to 2023. The analysis will consider variables such as union dues and inflation to assess the overall financial implications for teachers. By offering insights into the relationship between salary contracts, individual compensation, and economic factors, the objective is to empower teachers to make informed decisions about their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
+This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of United Federation of Teachers salary contracts from 2014 to 2023. The analysis will consider variables such as union dues and inflation to assess the overall financial implications for teachers. By offering insights into the relationship between salary contracts, individual compensation, and economic factors, the objective is to empower teachers to make informed decisions about their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
 
 ## Executive Summary:
 

@@ -8,13 +8,14 @@ def read_teacher_data(cached_file='./data/teachers_payroll.parquet'):
     Reads and returns the NYC teachers payroll data from a CSV file.
     
     Parameters:
-    - cached_file (str): Path to the cached CSV file containing teachers payroll data.
+    - cached_file (str): Path to the cached parquet file containing NYC teachers payroll data.
     
     Returns:
     - pd.DataFrame: DataFrame containing NYC teachers payroll data.
     '''
     df = pd.read_parquet(cached_file)
 
+    # Cast datatypes
     df['Fiscal Year'] = df['Fiscal Year'].astype('Int16')
     df['Hire Date'] = pd.to_datetime(df['Hire Date'])
     df['Salary'] = df['Salary'].astype('Int32')
@@ -26,28 +27,30 @@ def read_teacher_data(cached_file='./data/teachers_payroll.parquet'):
     df['Salary Monetary Diff Covers UFT Dues'] = df['Salary Monetary Diff Covers UFT Dues'].astype('Int8')
     df['Total Pay Covers UFT Dues'] = df['Total Pay Covers UFT Dues'].astype('Int8')
 
-    employment_labels = ['0-5', '6+']
-    contract_labels = ["2009-2018", "2019-2021", "2022-2027"]
+    # Create bin labels for categorical features
+    employment_labels = ['0-5', '6+'] # years employed
+    contract_labels = ["2009-2018", "2019-2021", "2022-2027"] # UFT contract periods
     salary_labels = ['40k-60k', '60k-80k', '80k-100k', '100k-120k', '120k+']
     additional_pay_labels = ['$0', '0-$1K', '$1k+']
-    delta_labels = ['0%', '0-5%', '5-10%', '10+%']
+    delta_labels = ['0%', '0-5%', '5-10%', '10+%'] # percent change in salary YOY
     simplified_delta_labels = ['No Change', 'Salary Increased']
-    monetary_diff_labels = ['0','0-$5k', '$5k-$10k', '$10k+']
+    monetary_diff_labels = ['0', '0-$5k', '$5k-$10k', '$10k+'] # total monetary change YOY
     compensation_labels = ['Compensation Decreased', 'No Change', 'Compensation Increased']
 
     # Transform bins into categorical features
     df['Employment Category'] = pd.Categorical(df['Employment Category'], categories=employment_labels, ordered=True)
-    df['Contract Period'] = pd.Categorical(df['Contract Period'],categories=contract_labels,ordered=True)
+    df['Contract Period'] = pd.Categorical(df['Contract Period'], categories=contract_labels, ordered=True)
     df['Salary Category'] = pd.Categorical(df['Salary Category'], categories=salary_labels, ordered=True)
-    df['Additional Pay Category'] = pd.Categorical(df['Additional Pay Category'],categories=additional_pay_labels,ordered=True)  
+    df['Additional Pay Category'] = pd.Categorical(df['Additional Pay Category'], categories=additional_pay_labels, ordered=True)  
     df['Salary Delta Category'] = pd.Categorical(df['Salary Delta Category'], categories=delta_labels, ordered=True)
-    df['Delta Category'] = pd.Categorical(df['Delta Category'],categories=simplified_delta_labels, ordered=True)
+    df['Delta Category'] = pd.Categorical(df['Delta Category'], categories=simplified_delta_labels, ordered=True)
     df['Salary Monetary Diff Category'] = pd.Categorical(df['Salary Monetary Diff Category'],
                                                          categories=monetary_diff_labels, ordered=True)
-    df['Compensation Category'] = pd.Categorical(df['Compensation Category'],categories=compensation_labels,ordered=True)
+    df['Compensation Category'] = pd.Categorical(df['Compensation Category'], categories=compensation_labels, ordered=True)
 
     return df
 
+## refactor read_and_filter_data gigafunction into seperate functions for readability
 
 def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/teachers_payroll.parquet'):
     '''
@@ -67,20 +70,20 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
     # Load the city payroll
     else:
         cols_to_use = ['Fiscal Year',
-                    'Agency Name',
-                    'Last Name',
-                    'First Name',
-                    'Mid Init',
-                    'Agency Start Date',
-                    'Title Description',
-                    'Leave Status as of June 30',
-                    'Base Salary',
-                    'Total Other Pay']
+                       'Agency Name',
+                       'Last Name',
+                       'First Name',
+                       'Mid Init',
+                       'Agency Start Date',
+                       'Title Description',
+                       'Leave Status as of June 30',
+                       'Base Salary',
+                       'Total Other Pay']
 
         data = pd.read_csv('city_payroll_data.csv',
                             usecols=cols_to_use,
                             engine='pyarrow')
-        # Filter for teachers that haven't retired
+        # Filter for full-time teachers that haven't retired
         conditions = (
             (data['Agency Name']=='DEPT OF ED PEDAGOGICAL') &
             (data['Title Description']=='TEACHER') &
@@ -96,8 +99,8 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
 
         # Rename columns
         df.rename(columns={'Agency Start Date': 'Hire Date',
-                        'Base Salary': 'Salary',
-                        'Total Other Pay': 'Additional Pay'}, inplace=True)
+                           'Base Salary': 'Salary',
+                           'Total Other Pay': 'Additional Pay'}, inplace=True)
 
         # Cast Hire Date to datetime, add Hire Year
         df['Hire Date'] = pd.to_datetime(df['Hire Date'], errors='coerce')
@@ -224,7 +227,7 @@ def read_and_filter_data(file_path='city_payroll_data.csv', cached_file='./data/
         df['Salary Monetary Diff Category'] =  pd.Categorical(df['Salary Monetary Diff Category'],categories=monetary_diff_labels,ordered=True)
         df['Compensation Category'] = pd.Categorical(df['Compensation Category'],categories=effective_rate_labels,ordered=True)
 
-        df['Salary at or Above Schedule Rate'] = np.where((df['Salary Delta'].round(1) >= df['Fiscal Year Rate']), 1, 0)
+        df['Salary at or Above Schedule Rate'] = np.where((df['Salary Delta'].round(2) >= df['Fiscal Year Rate']), 1, 0)
         df['Compensation at or Above Schedule Rate'] = np.where(df['Effective Rate']>=df['Fiscal Year Rate'],1,0)
         df['Salary Monetary Diff Covers UFT Dues'] = np.where(df['Salary Monetary Diff']>=df['UFT Dues'], 1, 0)
         df['Total Pay Covers UFT Dues'] = np.where((df['Salary Monetary Diff']+df['Additional Pay'])>=df['UFT Dues'],1,0)
