@@ -1,11 +1,10 @@
-# Navigating Your Compensation Journey: NYC Teacher's Payroll Insights
+![nyc-teacher-pay-header](./visuals/nyc-teacher-pay-header.png)
 
 ## Project Description:
 
 This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of United Federation of Teachers salary contracts from 2014 to 2023. The analysis will consider variables such as union dues and inflation to assess the overall financial implications for teachers. By offering insights into the relationship between salary contracts and individual compenstation the objective is to empower teachers to make informed decisions about their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
 
-## Executive Summary:
-
+![nyc-teacher-compensation-summary](./visuals/nyc-teacher-compensation-summary.png)
 
 ## Table of Contents:
 
@@ -65,11 +64,6 @@ To get started with this project, follow these steps:
 
 7. You're now ready to run the project! Open the main notebook or script and follow the instructions provided for data analysis, visualization, etc.
 
-### Data Sources:
-
-    (link to the dataset)
-
-
 ### Data Dictionary
 
 | Column Name              | Description                                            | Type       |
@@ -102,6 +96,7 @@ Detail the methodologies and techniques used to analyze the data, including key 
 Results:
 
 Summarize the key findings from the analysis, highlighting any trends, patterns, or noteworthy insights.
+Summary:
 
 ### Visualizations:
 
