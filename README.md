@@ -1,10 +1,10 @@
 ![nyc-teacher-pay-header](./visuals/nyc-teacher-pay-header.png)
 
+![nyc-teacher-compensation-summary](./visuals/nyc-teacher-compensation-summary.png)
+
 ## Project Description:
 
-This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of United Federation of Teachers salary contracts from 2014 to 2023. The analysis will consider variables such as union dues and inflation to assess the overall financial implications for teachers. By offering insights into the relationship between salary contracts and individual compenstation the objective is to empower teachers to make informed decisions about their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
-
-![nyc-teacher-compensation-summary](./visuals/nyc-teacher-compensation-summary.png)
+This project aims to provide NYC teachers with a comprehensive understanding of their expected annual salary growth, factoring in the impact of United Federation of Teachers salary contracts from 2014 to 2023. By offering insights into the relationship between salary contracts and individual compenstation the objective is to empower teachers to improve their financial well-being and evaluate the value they receive from UFT-negotiated contracts.
 
 ## Table of Contents:
 
